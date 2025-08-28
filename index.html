@@ -104,8 +104,9 @@
                     </select>
                     
                     <div class="view-toggle">
-                        <button class="toggle-btn active" data-layout="grid">⊞</button>
-                        <button class="toggle-btn" data-layout="list">☰</button>
+                        <button class="toggle-btn active" data-layout="grid" title="Grid View">⊞</button>
+                        <button class="toggle-btn" data-layout="badges" title="Compact Badges">⋮⋮⋮</button>
+                        <button class="toggle-btn" data-layout="list" title="List View">☰</button>
                     </div>
                 </div>
             </div>
@@ -344,7 +345,7 @@
     <div class="modal" id="roomModal">
         <div class="modal-content modal-small">
             <div class="modal-header">
-                <h2>Add Room</h2>
+                <h2 id="roomModalTitle">Add Room</h2>
                 <button class="close-modal" onclick="closeRoomModal()">&times;</button>
             </div>
             
@@ -373,6 +374,11 @@
                             <option value="👶">👶 Nursery</option>
                             <option value="🚗">🚗 Garage</option>
                             <option value="🌳">🌳 Outdoor</option>
+                            <option value="🏠">🏠 General</option>
+                            <option value="🪜">🪜 Basement</option>
+                            <option value="🏠">🏠 Attic</option>
+                            <option value="🧺">🧺 Laundry</option>
+                            <option value="🚪">🚪 Entryway</option>
                         </select>
                     </div>
                 </form>
@@ -380,7 +386,7 @@
             
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeRoomModal()">Cancel</button>
-                <button class="btn btn-primary" onclick="saveRoom()">Save Room</button>
+                <button class="btn btn-primary" id="roomSaveBtn" onclick="saveRoom()">Save Room</button>
             </div>
         </div>
     </div>

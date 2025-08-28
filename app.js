@@ -268,6 +268,7 @@ function saveItem() {
     saveToStorage();
     updateAllViews();
     closeModal();
+    showNotification(state.editingItem ? 'Item updated successfully' : 'Item added successfully', 'success');
 }
 
 function deleteItem(itemId) {
@@ -275,7 +276,26 @@ function deleteItem(itemId) {
         state.items = state.items.filter(i => i.id !== itemId);
         saveToStorage();
         updateAllViews();
+        showNotification('Item deleted successfully', 'success');
     }
+}
+
+function duplicateItem(itemId) {
+    const item = state.items.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const newItem = {
+        ...item,
+        id: generateId(),
+        name: `${item.name} (Copy)`,
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString()
+    };
+    
+    state.items.push(newItem);
+    saveToStorage();
+    updateAllViews();
+    showNotification('Item duplicated successfully', 'success');
 }
 
 function closeModal() {
@@ -284,29 +304,61 @@ function closeModal() {
 }
 
 // Room Management
+let editingRoomId = null;
+
 function openAddRoomModal() {
+    editingRoomId = null;
+    document.getElementById('roomModalTitle').textContent = 'Add Room';
+    document.getElementById('roomSaveBtn').textContent = 'Save Room';
     document.getElementById('roomForm').reset();
+    document.getElementById('roomModal').classList.add('active');
+}
+
+function editRoom(roomId) {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    editingRoomId = roomId;
+    document.getElementById('roomModalTitle').textContent = 'Edit Room';
+    document.getElementById('roomSaveBtn').textContent = 'Update Room';
+    
+    document.getElementById('roomName').value = room.name;
+    document.getElementById('roomBudget').value = room.budget || '';
+    document.getElementById('roomIcon').value = room.icon;
+    
     document.getElementById('roomModal').classList.add('active');
 }
 
 function saveRoom() {
     const roomData = {
-        name: document.getElementById('roomName').value,
+        name: document.getElementById('roomName').value.trim(),
         budget: parseFloat(document.getElementById('roomBudget').value) || 0,
         icon: document.getElementById('roomIcon').value
     };
 
     if (!roomData.name) {
-        alert('Please enter a room name');
+        showNotification('Please enter a room name', 'error');
         return;
     }
 
-    const newRoom = {
-        id: generateId(),
-        ...roomData
-    };
+    if (editingRoomId) {
+        // Update existing room
+        const room = state.rooms.find(r => r.id === editingRoomId);
+        if (room) {
+            Object.assign(room, roomData);
+            showNotification('Room updated successfully', 'success');
+        }
+    } else {
+        // Add new room
+        const newRoom = {
+            id: generateId(),
+            ...roomData,
+            createdAt: new Date().toISOString()
+        };
+        state.rooms.push(newRoom);
+        showNotification('Room added successfully', 'success');
+    }
 
-    state.rooms.push(newRoom);
     saveToStorage();
     updateRoomSelects();
     renderRooms();
@@ -314,16 +366,33 @@ function saveRoom() {
 }
 
 function deleteRoom(roomId) {
-    if (confirm('Delete this room? Items will not be deleted.')) {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    const itemsInRoom = state.items.filter(i => i.roomId === roomId).length;
+    const message = itemsInRoom > 0 
+        ? `Delete "${room.name}"? ${itemsInRoom} items will become unassigned.`
+        : `Delete "${room.name}"?`;
+    
+    if (confirm(message)) {
         state.rooms = state.rooms.filter(r => r.id !== roomId);
+        // Unassign items from deleted room
+        state.items.forEach(item => {
+            if (item.roomId === roomId) {
+                item.roomId = null;
+            }
+        });
         saveToStorage();
         updateRoomSelects();
         renderRooms();
+        renderInventory();
+        showNotification('Room deleted', 'success');
     }
 }
 
 function closeRoomModal() {
     document.getElementById('roomModal').classList.remove('active');
+    editingRoomId = null;
 }
 
 // Render Functions
@@ -347,6 +416,9 @@ function renderInventory() {
     if (state.currentLayout === 'grid') {
         container.className = 'items-grid';
         container.innerHTML = filteredItems.map(item => renderItemCard(item)).join('');
+    } else if (state.currentLayout === 'badges') {
+        container.className = 'items-badges';
+        container.innerHTML = filteredItems.map(item => renderItemBadge(item)).join('');
     } else {
         container.className = 'items-list';
         container.innerHTML = filteredItems.map(item => renderItemListRow(item)).join('');
@@ -355,8 +427,21 @@ function renderInventory() {
 
 function renderItemCard(item) {
     const room = state.rooms.find(r => r.id === item.roomId);
+    const isSelected = selectedItems.has(item.id);
+    
     return `
-        <div class="item-card" onclick="editItem('${item.id}')">
+        <div class="item-card ${isSelected ? 'selected' : ''}" onclick="editItem('${item.id}')">
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="event.stopPropagation(); toggleItemSelection('${item.id}')" title="Select">
+                    ${isSelected ? '☑' : '☐'}
+                </button>
+                <button class="quick-action-btn" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicate">
+                    📋
+                </button>
+                <button class="quick-action-btn danger" onclick="event.stopPropagation(); deleteItem('${item.id}')" title="Delete">
+                    🗑️
+                </button>
+            </div>
             <div class="item-image">
                 ${item.image 
                     ? `<img src="${item.image}" alt="${item.name}">` 
@@ -381,10 +466,53 @@ function renderItemCard(item) {
     `;
 }
 
+function renderItemBadge(item) {
+    const room = state.rooms.find(r => r.id === item.roomId);
+    const isSelected = selectedItems.has(item.id);
+    const statusColors = {
+        ordered: 'var(--warning-color)',
+        delivered: 'var(--success-color)',
+        wishlist: 'var(--gray)',
+        returned: 'var(--danger-color)'
+    };
+    
+    return `
+        <div class="badge-card ${isSelected ? 'selected' : ''}" onclick="editItem('${item.id}')">
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="event.stopPropagation(); toggleItemSelection('${item.id}')" title="Select">
+                    ${isSelected ? '☑' : '☐'}
+                </button>
+                <button class="quick-action-btn danger" onclick="event.stopPropagation(); deleteItem('${item.id}')" title="Delete">
+                    🗑️
+                </button>
+            </div>
+            ${item.quantity > 1 ? `<span class="badge-quantity">×${item.quantity}</span>` : ''}
+            <div class="badge-header">
+                <span class="badge-icon">${item.image ? '🖼️' : getCategoryIcon(item.category)}</span>
+                <span class="badge-name" title="${item.name}">${item.name}</span>
+            </div>
+            <div class="badge-price">$${formatPrice(item.price * item.quantity)}</div>
+            <div class="badge-details">
+                <span class="badge-room">
+                    ${room ? `${room.icon} ${room.name}` : '📦 Unassigned'}
+                </span>
+                <span class="badge-status" style="background: ${statusColors[item.status]}; color: white;">
+                    ${item.status}
+                </span>
+            </div>
+        </div>
+    `;
+}
+
 function renderItemListRow(item) {
     const room = state.rooms.find(r => r.id === item.roomId);
+    const isSelected = selectedItems.has(item.id);
+    
     return `
-        <div class="item-list-row" onclick="editItem('${item.id}')">
+        <div class="item-list-row ${isSelected ? 'selected' : ''}" data-item-id="${item.id}" onclick="editItem('${item.id}')">
+            <input type="checkbox" class="bulk-select-checkbox" 
+                   ${isSelected ? 'checked' : ''} 
+                   onclick="event.stopPropagation(); toggleItemSelection('${item.id}')">
             <div class="item-list-image">
                 ${item.image 
                     ? `<img src="${item.image}" alt="${item.name}">` 
@@ -404,6 +532,17 @@ function renderItemListRow(item) {
                     </span>
                 </div>
             </div>
+            <div class="quick-actions">
+                <button class="quick-action-btn" onclick="event.stopPropagation(); startInlineEdit('${item.id}', event)" title="Quick Edit">
+                    ✏️
+                </button>
+                <button class="quick-action-btn" onclick="event.stopPropagation(); duplicateItem('${item.id}')" title="Duplicate">
+                    📋
+                </button>
+                <button class="quick-action-btn danger" onclick="event.stopPropagation(); deleteItem('${item.id}')" title="Delete">
+                    🗑️
+                </button>
+            </div>
         </div>
     `;
 }
@@ -415,18 +554,33 @@ function renderRooms() {
     container.innerHTML = state.rooms.map(room => {
         const roomItems = state.items.filter(i => i.roomId === room.id);
         const totalSpent = roomItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const budgetPercentage = room.budget > 0 ? (totalSpent / room.budget) * 100 : 0;
         
         return `
             <div class="room-card">
+                <div class="room-actions">
+                    <button class="icon-btn" onclick="event.stopPropagation(); editRoom('${room.id}')" title="Edit Room">
+                        ✏️
+                    </button>
+                    <button class="icon-btn danger" onclick="event.stopPropagation(); deleteRoom('${room.id}')" title="Delete Room">
+                        🗑️
+                    </button>
+                </div>
                 <div class="room-icon">${room.icon}</div>
                 <div class="room-name">${room.name}</div>
                 <div class="room-stats">
-                    ${roomItems.length} items · $${formatPrice(totalSpent)}
-                    ${room.budget ? `<br>Budget: $${formatPrice(room.budget)}` : ''}
+                    <div>${roomItems.length} items</div>
+                    <div class="room-spent">$${formatPrice(totalSpent)}</div>
+                    ${room.budget ? `
+                        <div class="room-budget-info">
+                            Budget: $${formatPrice(room.budget)}
+                            <div class="mini-progress">
+                                <div class="mini-progress-bar ${budgetPercentage > 100 ? 'danger' : budgetPercentage > 80 ? 'warning' : ''}" 
+                                     style="width: ${Math.min(budgetPercentage, 100)}%"></div>
+                            </div>
+                        </div>
+                    ` : ''}
                 </div>
-                <button class="btn btn-secondary" style="margin-top: 1rem;" onclick="deleteRoom('${room.id}')">
-                    Delete
-                </button>
             </div>
         `;
     }).join('');
@@ -856,6 +1010,198 @@ function uploadDocument() {
 
 function setBudgetLimits() {
     alert('Budget limits feature coming soon!');
+}
+
+// Notification System
+function showNotification(message, type = 'success') {
+    const icons = {
+        success: '✅',
+        error: '❌',
+        warning: '⚠️',
+        info: 'ℹ️'
+    };
+    
+    const notification = document.createElement('div');
+    notification.className = `notification ${type}`;
+    notification.innerHTML = `
+        <span class="notification-icon">${icons[type]}</span>
+        <div class="notification-content">
+            <div class="notification-title">${type.charAt(0).toUpperCase() + type.slice(1)}</div>
+            <div class="notification-message">${message}</div>
+        </div>
+    `;
+    
+    document.body.appendChild(notification);
+    
+    // Auto-remove after 5 seconds
+    setTimeout(() => {
+        notification.style.animation = 'slideOut 0.3s ease-out';
+        setTimeout(() => notification.remove(), 300);
+    }, 5000);
+}
+
+// Enhanced Item Management with Quick Actions
+let selectedItems = new Set();
+
+function toggleItemSelection(itemId) {
+    if (selectedItems.has(itemId)) {
+        selectedItems.delete(itemId);
+    } else {
+        selectedItems.add(itemId);
+    }
+    updateBulkActionsBar();
+}
+
+function selectAllItems() {
+    const filteredItems = getFilteredItems();
+    filteredItems.forEach(item => selectedItems.add(item.id));
+    updateBulkActionsBar();
+    renderInventory();
+}
+
+function clearSelection() {
+    selectedItems.clear();
+    updateBulkActionsBar();
+    renderInventory();
+}
+
+function updateBulkActionsBar() {
+    let bar = document.getElementById('bulkActionsBar');
+    
+    if (selectedItems.size === 0) {
+        if (bar) bar.remove();
+        return;
+    }
+    
+    if (!bar) {
+        bar = document.createElement('div');
+        bar.id = 'bulkActionsBar';
+        bar.className = 'bulk-actions-bar';
+        document.body.appendChild(bar);
+    }
+    
+    bar.innerHTML = `
+        <span>${selectedItems.size} items selected</span>
+        <button class="bulk-action-btn" onclick="bulkUpdateStatus()">Update Status</button>
+        <button class="bulk-action-btn" onclick="bulkMoveToRoom()">Move to Room</button>
+        <button class="bulk-action-btn danger" onclick="bulkDelete()">Delete</button>
+        <button class="bulk-action-btn" onclick="clearSelection()">Cancel</button>
+    `;
+}
+
+function bulkDelete() {
+    if (confirm(`Delete ${selectedItems.size} items?`)) {
+        state.items = state.items.filter(item => !selectedItems.has(item.id));
+        saveToStorage();
+        clearSelection();
+        updateAllViews();
+        showNotification(`${selectedItems.size} items deleted`, 'success');
+    }
+}
+
+function bulkUpdateStatus() {
+    const newStatus = prompt('Enter new status (ordered/delivered/wishlist/returned):');
+    if (newStatus && ['ordered', 'delivered', 'wishlist', 'returned'].includes(newStatus)) {
+        state.items.forEach(item => {
+            if (selectedItems.has(item.id)) {
+                item.status = newStatus;
+            }
+        });
+        saveToStorage();
+        clearSelection();
+        updateAllViews();
+        showNotification(`Status updated for ${selectedItems.size} items`, 'success');
+    }
+}
+
+function bulkMoveToRoom() {
+    const roomOptions = state.rooms.map(r => `${r.name} (${r.id})`).join('\n');
+    const roomId = prompt(`Select room ID:\n${roomOptions}`);
+    const room = state.rooms.find(r => r.id === roomId);
+    
+    if (room) {
+        state.items.forEach(item => {
+            if (selectedItems.has(item.id)) {
+                item.roomId = roomId;
+            }
+        });
+        saveToStorage();
+        clearSelection();
+        updateAllViews();
+        showNotification(`Items moved to ${room.name}`, 'success');
+    }
+}
+
+// Inline Editing for List View
+let editingInlineId = null;
+
+function startInlineEdit(itemId, event) {
+    event.stopPropagation();
+    
+    if (editingInlineId) {
+        cancelInlineEdit();
+    }
+    
+    editingInlineId = itemId;
+    const item = state.items.find(i => i.id === itemId);
+    if (!item) return;
+    
+    const row = document.querySelector(`[data-item-id="${itemId}"]`);
+    if (!row) return;
+    
+    row.classList.add('editing');
+    row.innerHTML = `
+        <div class="inline-edit-form">
+            <input type="text" class="inline-input" id="inline-name" value="${item.name}">
+            <select class="inline-input" id="inline-category">
+                <option value="furniture" ${item.category === 'furniture' ? 'selected' : ''}>Furniture</option>
+                <option value="appliances" ${item.category === 'appliances' ? 'selected' : ''}>Appliances</option>
+                <option value="electronics" ${item.category === 'electronics' ? 'selected' : ''}>Electronics</option>
+                <option value="decor" ${item.category === 'decor' ? 'selected' : ''}>Decor</option>
+                <option value="lighting" ${item.category === 'lighting' ? 'selected' : ''}>Lighting</option>
+                <option value="outdoor" ${item.category === 'outdoor' ? 'selected' : ''}>Outdoor</option>
+                <option value="other" ${item.category === 'other' ? 'selected' : ''}>Other</option>
+            </select>
+            <input type="number" class="inline-input" id="inline-quantity" value="${item.quantity}" min="1">
+            <input type="number" class="inline-input" id="inline-price" value="${item.price}" step="0.01">
+            <select class="inline-input" id="inline-status">
+                <option value="wishlist" ${item.status === 'wishlist' ? 'selected' : ''}>Wishlist</option>
+                <option value="ordered" ${item.status === 'ordered' ? 'selected' : ''}>Ordered</option>
+                <option value="delivered" ${item.status === 'delivered' ? 'selected' : ''}>Delivered</option>
+                <option value="returned" ${item.status === 'returned' ? 'selected' : ''}>Returned</option>
+            </select>
+            <div class="inline-actions">
+                <button class="inline-btn save" onclick="saveInlineEdit()">✓</button>
+                <button class="inline-btn cancel" onclick="cancelInlineEdit()">✗</button>
+            </div>
+        </div>
+    `;
+    
+    document.getElementById('inline-name').focus();
+}
+
+function saveInlineEdit() {
+    if (!editingInlineId) return;
+    
+    const item = state.items.find(i => i.id === editingInlineId);
+    if (!item) return;
+    
+    item.name = document.getElementById('inline-name').value;
+    item.category = document.getElementById('inline-category').value;
+    item.quantity = parseInt(document.getElementById('inline-quantity').value) || 1;
+    item.price = parseFloat(document.getElementById('inline-price').value) || 0;
+    item.status = document.getElementById('inline-status').value;
+    item.updatedAt = new Date().toISOString();
+    
+    saveToStorage();
+    editingInlineId = null;
+    renderInventory();
+    showNotification('Item updated successfully', 'success');
+}
+
+function cancelInlineEdit() {
+    editingInlineId = null;
+    renderInventory();
 }
 
 // Utility Functions
