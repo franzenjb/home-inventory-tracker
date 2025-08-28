@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Inventory Tracker - Complete Purchase & Asset Management</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Header with Navigation -->
+        <header class="app-header">
+            <div class="header-content">
+                <h1>🏠 Home Inventory Tracker</h1>
+                <p class="tagline">Track, Budget, and Manage Every Purchase</p>
+            </div>
+            <nav class="main-nav">
+                <button class="nav-btn active" data-view="inventory">
+                    📦 Inventory
+                </button>
+                <button class="nav-btn" data-view="budget">
+                    💰 Budget
+                </button>
+                <button class="nav-btn" data-view="deliveries">
+                    🚚 Deliveries
+                </button>
+                <button class="nav-btn" data-view="rooms">
+                    🏠 Rooms
+                </button>
+                <button class="nav-btn" data-view="analytics">
+                    📊 Analytics
+                </button>
+                <button class="nav-btn" data-view="documents">
+                    📄 Documents
+                </button>
+            </nav>
+        </header>
+
+        <!-- Quick Stats Bar -->
+        <div class="stats-bar">
+            <div class="stat-card">
+                <span class="stat-value" id="totalItems">0</span>
+                <span class="stat-label">Total Items</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="totalSpent">$0</span>
+                <span class="stat-label">Total Spent</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="pendingDeliveries">0</span>
+                <span class="stat-label">Pending Deliveries</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="totalRooms">0</span>
+                <span class="stat-label">Rooms</span>
+            </div>
+            <div class="stat-card">
+                <span class="stat-value" id="thisMonthSpent">$0</span>
+                <span class="stat-label">This Month</span>
+            </div>
+        </div>
+
+        <!-- Inventory View -->
+        <div class="view-container active" id="inventoryView">
+            <!-- Action Bar -->
+            <div class="action-bar">
+                <div class="action-group">
+                    <button class="btn btn-primary" onclick="openAddItemModal()">
+                        ➕ Add Item
+                    </button>
+                    <button class="btn btn-secondary" onclick="importFromCSV()">
+                        📥 Import CSV
+                    </button>
+                    <button class="btn btn-secondary" onclick="exportToCSV()">
+                        📤 Export
+                    </button>
+                </div>
+                
+                <!-- Filters -->
+                <div class="filter-group">
+                    <input type="text" id="searchInput" placeholder="Search items..." class="search-input">
+                    
+                    <select id="roomFilter" class="filter-select">
+                        <option value="">All Rooms</option>
+                    </select>
+                    
+                    <select id="categoryFilter" class="filter-select">
+                        <option value="">All Categories</option>
+                        <option value="furniture">Furniture</option>
+                        <option value="appliances">Appliances</option>
+                        <option value="electronics">Electronics</option>
+                        <option value="decor">Decor</option>
+                        <option value="lighting">Lighting</option>
+                        <option value="outdoor">Outdoor</option>
+                        <option value="other">Other</option>
+                    </select>
+                    
+                    <select id="statusFilter" class="filter-select">
+                        <option value="">All Status</option>
+                        <option value="ordered">Ordered</option>
+                        <option value="delivered">Delivered</option>
+                        <option value="wishlist">Wishlist</option>
+                        <option value="returned">Returned</option>
+                    </select>
+                    
+                    <div class="view-toggle">
+                        <button class="toggle-btn active" data-layout="grid">⊞</button>
+                        <button class="toggle-btn" data-layout="list">☰</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Items Grid -->
+            <div id="itemsContainer" class="items-grid">
+                <!-- Items will be dynamically loaded here -->
+            </div>
+        </div>
+
+        <!-- Budget View -->
+        <div class="view-container" id="budgetView">
+            <div class="budget-header">
+                <h2>Budget Overview</h2>
+                <div class="budget-controls">
+                    <select id="budgetTimeframe">
+                        <option value="month">This Month</option>
+                        <option value="quarter">This Quarter</option>
+                        <option value="year">This Year</option>
+                        <option value="all">All Time</option>
+                    </select>
+                    <button class="btn btn-primary" onclick="setBudgetLimits()">⚙️ Set Limits</button>
+                </div>
+            </div>
+            
+            <div class="budget-grid">
+                <!-- Room Budgets -->
+                <div class="budget-section">
+                    <h3>Budget by Room</h3>
+                    <div id="roomBudgets"></div>
+                </div>
+                
+                <!-- Category Budgets -->
+                <div class="budget-section">
+                    <h3>Budget by Category</h3>
+                    <div id="categoryBudgets"></div>
+                </div>
+                
+                <!-- Recent Purchases -->
+                <div class="budget-section">
+                    <h3>Recent Purchases</h3>
+                    <div id="recentPurchases"></div>
+                </div>
+                
+                <!-- Spending Trends -->
+                <div class="budget-section full-width">
+                    <h3>Spending Trends</h3>
+                    <canvas id="spendingChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Deliveries View -->
+        <div class="view-container" id="deliveriesView">
+            <div class="deliveries-header">
+                <h2>Delivery Tracker</h2>
+                <div class="delivery-filters">
+                    <button class="filter-chip active" data-delivery="all">All</button>
+                    <button class="filter-chip" data-delivery="today">Today</button>
+                    <button class="filter-chip" data-delivery="week">This Week</button>
+                    <button class="filter-chip" data-delivery="pending">Pending</button>
+                    <button class="filter-chip" data-delivery="delivered">Delivered</button>
+                </div>
+            </div>
+            
+            <div class="deliveries-timeline" id="deliveriesTimeline">
+                <!-- Delivery items will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Rooms View -->
+        <div class="view-container" id="roomsView">
+            <div class="rooms-header">
+                <h2>Room Management</h2>
+                <button class="btn btn-primary" onclick="openAddRoomModal()">➕ Add Room</button>
+            </div>
+            
+            <div class="rooms-grid" id="roomsGrid">
+                <!-- Room cards will be loaded here -->
+            </div>
+        </div>
+
+        <!-- Analytics View -->
+        <div class="view-container" id="analyticsView">
+            <div class="analytics-header">
+                <h2>Analytics Dashboard</h2>
+                <select id="analyticsTimeframe">
+                    <option value="30">Last 30 Days</option>
+                    <option value="90">Last 90 Days</option>
+                    <option value="365">Last Year</option>
+                    <option value="all">All Time</option>
+                </select>
+            </div>
+            
+            <div class="analytics-grid">
+                <div class="analytics-card">
+                    <h3>Top Categories</h3>
+                    <canvas id="categoryChart"></canvas>
+                </div>
+                <div class="analytics-card">
+                    <h3>Room Distribution</h3>
+                    <canvas id="roomChart"></canvas>
+                </div>
+                <div class="analytics-card">
+                    <h3>Price Range Analysis</h3>
+                    <canvas id="priceChart"></canvas>
+                </div>
+                <div class="analytics-card">
+                    <h3>Monthly Trends</h3>
+                    <canvas id="trendChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents View -->
+        <div class="view-container" id="documentsView">
+            <div class="documents-header">
+                <h2>Warranties & Documents</h2>
+                <button class="btn btn-primary" onclick="uploadDocument()">📎 Upload Document</button>
+            </div>
+            
+            <div class="documents-grid" id="documentsGrid">
+                <!-- Document cards will be loaded here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Item Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 id="modalTitle">Add New Item</h2>
+                <button class="close-modal" onclick="closeModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="itemForm">
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemName">Item Name *</label>
+                            <input type="text" id="itemName" required>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemCategory">Category *</label>
+                            <select id="itemCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="furniture">Furniture</option>
+                                <option value="appliances">Appliances</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="decor">Decor</option>
+                                <option value="lighting">Lighting</option>
+                                <option value="outdoor">Outdoor</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemRoom">Room</label>
+                            <select id="itemRoom">
+                                <option value="">Select Room</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemQuantity">Quantity</label>
+                            <input type="number" id="itemQuantity" value="1" min="1">
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemPrice">Price</label>
+                            <input type="number" id="itemPrice" step="0.01" placeholder="0.00">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemStatus">Status</label>
+                            <select id="itemStatus">
+                                <option value="wishlist">Wishlist</option>
+                                <option value="ordered">Ordered</option>
+                                <option value="delivered">Delivered</option>
+                                <option value="returned">Returned</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="orderDate">Order Date</label>
+                            <input type="date" id="orderDate">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="deliveryDate">Est. Delivery Date</label>
+                            <input type="date" id="deliveryDate">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemUrl">Product URL</label>
+                        <input type="url" id="itemUrl" placeholder="https://...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemImage">Image URL</label>
+                        <input type="url" id="itemImage" placeholder="https://...">
+                        <small>Or drag & drop an image below</small>
+                        <div class="image-drop-zone" id="imageDropZone">
+                            <p>Drop image here or click to select</p>
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemNotes">Notes</label>
+                        <textarea id="itemNotes" rows="3"></textarea>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="warrantyExpiry">Warranty Expires</label>
+                        <input type="date" id="warrantyExpiry">
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveItem()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div class="modal" id="roomModal">
+        <div class="modal-content modal-small">
+            <div class="modal-header">
+                <h2>Add Room</h2>
+                <button class="close-modal" onclick="closeRoomModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <form id="roomForm">
+                    <div class="form-group">
+                        <label for="roomName">Room Name</label>
+                        <input type="text" id="roomName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomBudget">Budget Limit (Optional)</label>
+                        <input type="number" id="roomBudget" step="0.01" placeholder="0.00">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomIcon">Icon</label>
+                        <select id="roomIcon">
+                            <option value="🛋️">🛋️ Living Room</option>
+                            <option value="🛏️">🛏️ Bedroom</option>
+                            <option value="🍽️">🍽️ Dining Room</option>
+                            <option value="🍳">🍳 Kitchen</option>
+                            <option value="🚿">🚿 Bathroom</option>
+                            <option value="📚">📚 Office</option>
+                            <option value="🎮">🎮 Game Room</option>
+                            <option value="👶">👶 Nursery</option>
+                            <option value="🚗">🚗 Garage</option>
+                            <option value="🌳">🌳 Outdoor</option>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeRoomModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveRoom()">Save Room</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>

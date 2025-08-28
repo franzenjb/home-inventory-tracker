@@ -1,0 +1,21 @@
+{
+  "name": "home-inventory-tracker",
+  "version": "1.0.0",
+  "description": "Comprehensive home inventory and purchase tracking system",
+  "main": "index.html",
+  "scripts": {
+    "start": "python3 -m http.server 8000",
+    "serve": "npx http-server -p 8000"
+  },
+  "keywords": [
+    "home",
+    "inventory",
+    "furniture",
+    "budget",
+    "tracking",
+    "purchases",
+    "deliveries"
+  ],
+  "author": "",
+  "license": "MIT"
+}
