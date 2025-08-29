@@ -120,7 +120,7 @@
         <!-- Budget View -->
         <div class="view-container" id="budgetView">
             <div class="budget-header">
-                <h2>Budget Overview</h2>
+                <h2>Budget Management</h2>
                 <div class="budget-controls">
                     <select id="budgetTimeframe">
                         <option value="month">This Month</option>
@@ -128,33 +128,115 @@
                         <option value="year">This Year</option>
                         <option value="all">All Time</option>
                     </select>
-                    <button class="btn btn-primary" onclick="setBudgetLimits()">⚙️ Set Limits</button>
+                    <button class="btn btn-primary" onclick="openBudgetModal()">💰 Set Room Budgets</button>
+                    <button class="btn btn-secondary" onclick="exportBudgetReport()">📊 Export Report</button>
                 </div>
             </div>
             
-            <div class="budget-grid">
-                <!-- Room Budgets -->
-                <div class="budget-section">
-                    <h3>Budget by Room</h3>
-                    <div id="roomBudgets"></div>
+            <!-- Main Budget Table -->
+            <div class="budget-table-container">
+                <table class="budget-table">
+                    <thead>
+                        <tr>
+                            <th>Room</th>
+                            <th>Budget</th>
+                            <th>Actual Spent</th>
+                            <th>Remaining</th>
+                            <th>% Used</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="budgetTableBody">
+                        <!-- Dynamic rows will be inserted here -->
+                    </tbody>
+                    <tfoot>
+                        <tr class="totals-row">
+                            <td><strong>TOTALS</strong></td>
+                            <td id="totalBudget"><strong>$0</strong></td>
+                            <td id="totalActual"><strong>$0</strong></td>
+                            <td id="totalRemaining"><strong>$0</strong></td>
+                            <td id="totalPercentage"><strong>0%</strong></td>
+                            <td id="totalStatus">-</td>
+                            <td>-</td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>
+            
+            
+            <!-- Enhanced Analytics Tables -->
+            <div class="budget-secondary-section">
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-8);">
+                    <!-- Category Performance -->
+                    <div class="budget-table-container">
+                        <div style="padding: var(--space-6); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin: 0; font-size: var(--font-size-lg); font-weight: 700; color: var(--gray-800);">Category Performance</h3>
+                            <p style="margin: var(--space-1) 0 0; color: var(--gray-600); font-size: var(--font-size-xs);">Spending analysis by item category</p>
+                        </div>
+                        <table class="budget-table compact">
+                            <thead>
+                                <tr>
+                                    <th>Category</th>
+                                    <th>Total Spent</th>
+                                    <th>Items</th>
+                                    <th>Avg. Price</th>
+                                </tr>
+                            </thead>
+                            <tbody id="categoryTableBody">
+                                <!-- Dynamic rows will be inserted here -->
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Recent Transactions -->
+                    <div class="budget-table-container">
+                        <div style="padding: var(--space-6); border-bottom: 1px solid rgba(255,255,255,0.1);">
+                            <h3 style="margin: 0; font-size: var(--font-size-lg); font-weight: 700; color: var(--gray-800);">Recent Activity</h3>
+                            <p style="margin: var(--space-1) 0 0; color: var(--gray-600); font-size: var(--font-size-xs);">Latest purchases and updates</p>
+                        </div>
+                        <div id="recentActivityList" style="padding: var(--space-4);">
+                            <!-- Recent activity items will be inserted here -->
+                        </div>
+                    </div>
                 </div>
-                
-                <!-- Category Budgets -->
-                <div class="budget-section">
-                    <h3>Budget by Category</h3>
-                    <div id="categoryBudgets"></div>
+            </div>
+        </div>
+
+        <!-- Budget Export Modal -->
+        <div class="modal" id="exportModal">
+            <div class="modal-content modal-small">
+                <div class="modal-header">
+                    <h2>Export Options</h2>
+                    <button class="close-modal" onclick="closeExportModal()">&times;</button>
                 </div>
-                
-                <!-- Recent Purchases -->
-                <div class="budget-section">
-                    <h3>Recent Purchases</h3>
-                    <div id="recentPurchases"></div>
+                <div class="modal-body">
+                    <div class="form-group">
+                        <label>Export Format</label>
+                        <select id="exportFormat">
+                            <option value="pdf">PDF Report</option>
+                            <option value="excel">Excel Spreadsheet</option>
+                            <option value="csv">CSV Data</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Include Charts</label>
+                        <input type="checkbox" id="includeCharts" checked>
+                    </div>
+                    <div class="form-group">
+                        <label>Time Period</label>
+                        <select id="exportTimeframe">
+                            <option value="current">Current Selection</option>
+                            <option value="month">This Month</option>
+                            <option value="quarter">This Quarter</option>
+                            <option value="year">This Year</option>
+                            <option value="all">All Time</option>
+                        </select>
+                    </div>
                 </div>
-                
-                <!-- Spending Trends -->
-                <div class="budget-section full-width">
-                    <h3>Spending Trends</h3>
-                    <canvas id="spendingChart"></canvas>
+                <div class="modal-footer">
+                    <button class="btn btn-secondary" onclick="closeExportModal()">Cancel</button>
+                    <button class="btn btn-primary" onclick="executeExport()">Generate Report</button>
                 </div>
             </div>
         </div>
@@ -387,6 +469,27 @@
             <div class="modal-footer">
                 <button class="btn btn-secondary" onclick="closeRoomModal()">Cancel</button>
                 <button class="btn btn-primary" id="roomSaveBtn" onclick="saveRoom()">Save Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Modal -->
+    <div class="modal" id="budgetModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Set Room Budgets</h2>
+                <button class="close-modal" onclick="closeBudgetModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <div class="budget-form-grid" id="budgetFormGrid">
+                    <!-- Dynamic budget inputs will be inserted here -->
+                </div>
+            </div>
+            
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="closeBudgetModal()">Cancel</button>
+                <button class="btn btn-primary" onclick="saveBudgets()">Save Budgets</button>
             </div>
         </div>
     </div>

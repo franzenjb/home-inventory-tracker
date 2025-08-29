@@ -647,6 +647,13 @@ function renderDeliveries() {
     `).join('');
 }
 
+// Chart.js instances
+let budgetCharts = {
+    donut: null,
+    trend: null,
+    category: null
+};
+
 function updateBudgetView() {
     const timeframe = document.getElementById('budgetTimeframe')?.value || 'month';
     
@@ -675,78 +682,180 @@ function updateBudgetView() {
         const orderDate = new Date(item.orderDate);
         return orderDate >= startDate && orderDate <= endDate;
     });
+    
+    // Calculate totals for KPIs
+    const totalBudget = state.rooms.reduce((sum, room) => sum + (room.budget || 0), 0);
+    const totalSpent = relevantItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+    const totalRemaining = totalBudget - totalSpent;
+    const utilizationPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
+    
+    // Update KPI cards with animations
+    updateKPICards(totalBudget, totalSpent, totalRemaining, utilizationPercentage);
+    
+    // Update progress ring
+    updateProgressRing(utilizationPercentage);
 
-    // Room budgets
-    const roomBudgetsContainer = document.getElementById('roomBudgets');
-    if (roomBudgetsContainer) {
-        roomBudgetsContainer.innerHTML = state.rooms.map(room => {
+    // Main Budget Table
+    const budgetTableBody = document.getElementById('budgetTableBody');
+    if (budgetTableBody) {
+        let totalBudget = 0;
+        let totalActual = 0;
+        
+        budgetTableBody.innerHTML = state.rooms.map(room => {
             const roomItems = relevantItems.filter(i => i.roomId === room.id);
             const spent = roomItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
             const budget = room.budget || 0;
+            const remaining = budget - spent;
             const percentage = budget > 0 ? (spent / budget) * 100 : 0;
             
+            totalBudget += budget;
+            totalActual += spent;
+            
+            // Determine status
+            let statusClass = 'neutral';
+            let statusText = 'No Budget';
+            if (budget > 0) {
+                if (percentage <= 50) {
+                    statusClass = 'good';
+                    statusText = 'On Track';
+                } else if (percentage <= 80) {
+                    statusClass = 'warning';
+                    statusText = 'Watch';
+                } else if (percentage <= 100) {
+                    statusClass = 'warning';
+                    statusText = 'Near Limit';
+                } else {
+                    statusClass = 'danger';
+                    statusText = 'Over Budget';
+                }
+            }
+            
             return `
-                <div class="budget-item">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>${room.icon} ${room.name}</span>
-                        <span>$${formatPrice(spent)} ${budget > 0 ? `/ $${formatPrice(budget)}` : ''}</span>
-                    </div>
-                    ${budget > 0 ? `
-                        <div class="budget-progress">
-                            <div class="budget-progress-bar ${percentage > 100 ? 'danger' : percentage > 80 ? 'warning' : ''}" 
-                                 style="width: ${Math.min(percentage, 100)}%"></div>
+                <tr>
+                    <td>
+                        <strong>${room.icon} ${room.name}</strong>
+                        <br>
+                        <small style="color: var(--gray);">${roomItems.length} items</small>
+                    </td>
+                    <td>${budget > 0 ? `$${formatPrice(budget)}` : '-'}</td>
+                    <td><strong>$${formatPrice(spent)}</strong></td>
+                    <td style="color: ${remaining >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">
+                        ${budget > 0 ? `$${formatPrice(Math.abs(remaining))}` : '-'}
+                    </td>
+                    <td>
+                        ${budget > 0 ? `
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <span>${Math.round(percentage)}%</span>
+                                <div class="table-progress">
+                                    <div class="table-progress-bar ${percentage > 100 ? 'danger' : percentage > 80 ? 'warning' : ''}" 
+                                         style="width: ${Math.min(percentage, 100)}%"></div>
+                                </div>
+                            </div>
+                        ` : '-'}
+                    </td>
+                    <td>
+                        <span class="budget-status ${statusClass}">${statusText}</span>
+                    </td>
+                    <td>
+                        <div class="budget-actions">
+                            <button class="budget-action-btn" onclick="editRoomBudget('${room.id}')">Edit</button>
+                            <button class="budget-action-btn" onclick="viewRoomItems('${room.id}')">View</button>
                         </div>
-                    ` : ''}
-                </div>
+                    </td>
+                </tr>
             `;
         }).join('');
+        
+        // Update totals
+        const totalRemaining = totalBudget - totalActual;
+        const totalPercentage = totalBudget > 0 ? (totalActual / totalBudget) * 100 : 0;
+        
+        document.getElementById('totalBudget').innerHTML = `<strong>$${formatPrice(totalBudget)}</strong>`;
+        document.getElementById('totalActual').innerHTML = `<strong>$${formatPrice(totalActual)}</strong>`;
+        document.getElementById('totalRemaining').innerHTML = `<strong style="color: ${totalRemaining >= 0 ? 'var(--success-color)' : 'var(--danger-color)'}">$${formatPrice(Math.abs(totalRemaining))}</strong>`;
+        document.getElementById('totalPercentage').innerHTML = `<strong>${Math.round(totalPercentage)}%</strong>`;
+        
+        let totalStatusClass = 'neutral';
+        let totalStatusText = 'Overall';
+        if (totalBudget > 0) {
+            if (totalPercentage <= 50) {
+                totalStatusClass = 'good';
+                totalStatusText = 'Excellent';
+            } else if (totalPercentage <= 80) {
+                totalStatusClass = 'warning';
+                totalStatusText = 'Good';
+            } else if (totalPercentage <= 100) {
+                totalStatusClass = 'warning';
+                totalStatusText = 'Caution';
+            } else {
+                totalStatusClass = 'danger';
+                totalStatusText = 'Over Budget';
+            }
+        }
+        document.getElementById('totalStatus').innerHTML = `<span class="budget-status ${totalStatusClass}">${totalStatusText}</span>`;
+    }
+    
+    // Update charts
+    updateBudgetCharts(relevantItems);
+    
+    // Update recent activity
+    updateRecentActivity(relevantItems);
+    
+    // Add unassigned items row if any exist
+    const unassignedItems = relevantItems.filter(i => !i.roomId);
+    if (unassignedItems.length > 0 && budgetTableBody) {
+        const unassignedSpent = unassignedItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const unassignedRow = `
+            <tr style="opacity: 0.7;">
+                <td>
+                    <strong>📦 Unassigned</strong>
+                    <br>
+                    <small style="color: var(--gray);">${unassignedItems.length} items</small>
+                </td>
+                <td>-</td>
+                <td><strong>$${formatPrice(unassignedSpent)}</strong></td>
+                <td>-</td>
+                <td>-</td>
+                <td><span class="budget-status neutral">No Room</span></td>
+                <td>
+                    <button class="budget-action-btn" onclick="assignItemsToRoom()">Assign</button>
+                </td>
+            </tr>
+        `;
+        budgetTableBody.innerHTML += unassignedRow;
     }
 
-    // Category budgets
-    const categoryBudgetsContainer = document.getElementById('categoryBudgets');
-    if (categoryBudgetsContainer) {
+    // Category breakdown table
+    const categoryTableBody = document.getElementById('categoryTableBody');
+    if (categoryTableBody) {
         const categories = ['furniture', 'appliances', 'electronics', 'decor', 'lighting', 'outdoor', 'other'];
         
-        categoryBudgetsContainer.innerHTML = categories.map(category => {
+        categoryTableBody.innerHTML = categories.map(category => {
             const categoryItems = relevantItems.filter(i => i.category === category);
             const spent = categoryItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+            const itemCount = categoryItems.length;
             
-            if (spent === 0) return '';
+            if (itemCount === 0) return '';
+            
+            const avgPrice = spent / itemCount;
             
             return `
-                <div class="budget-item">
-                    <div style="display: flex; justify-content: space-between;">
-                        <span>${getCategoryIcon(category)} ${category}</span>
-                        <span>$${formatPrice(spent)}</span>
-                    </div>
-                </div>
+                <tr>
+                    <td>
+                        <div style="display: flex; align-items: center; gap: var(--space-2);">
+                            <span style="font-size: var(--font-size-lg);">${getCategoryIcon(category)}</span>
+                            <span style="font-weight: 600;">${category.charAt(0).toUpperCase() + category.slice(1)}</span>
+                        </div>
+                    </td>
+                    <td><strong style="color: var(--primary-color);">$${formatPrice(spent)}</strong></td>
+                    <td>
+                        <span style="background: var(--primary-gradient); color: white; padding: var(--space-1) var(--space-2); border-radius: var(--radius-md); font-size: var(--font-size-xs); font-weight: 600;">${itemCount}</span>
+                    </td>
+                    <td>$${formatPrice(avgPrice)}</td>
+                </tr>
             `;
         }).join('');
     }
-
-    // Recent purchases
-    const recentPurchasesContainer = document.getElementById('recentPurchases');
-    if (recentPurchasesContainer) {
-        const recentItems = relevantItems
-            .filter(item => item.orderDate)
-            .sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate))
-            .slice(0, 5);
-        
-        recentPurchasesContainer.innerHTML = recentItems.map(item => `
-            <div class="budget-item">
-                <div style="display: flex; justify-content: space-between;">
-                    <span>${item.name}</span>
-                    <span>$${formatPrice(item.price * item.quantity)}</span>
-                </div>
-                <div style="font-size: 0.75rem; color: var(--gray); margin-top: 0.25rem;">
-                    ${formatDate(item.orderDate)}
-                </div>
-            </div>
-        `).join('') || '<p style="color: var(--gray);">No recent purchases</p>';
-    }
-
-    // Spending chart
-    updateSpendingChart(relevantItems);
 }
 
 function updateAnalytics() {
@@ -1008,8 +1117,117 @@ function uploadDocument() {
     alert('Document upload feature coming soon!');
 }
 
-function setBudgetLimits() {
-    alert('Budget limits feature coming soon!');
+// Budget Management Functions
+function openBudgetModal() {
+    const formGrid = document.getElementById('budgetFormGrid');
+    if (!formGrid) return;
+    
+    formGrid.innerHTML = state.rooms.map(room => `
+        <div class="budget-input-group">
+            <label for="budget-${room.id}">
+                ${room.icon} ${room.name}
+            </label>
+            <input type="number" 
+                   id="budget-${room.id}" 
+                   placeholder="Enter budget amount"
+                   value="${room.budget || ''}"
+                   step="100"
+                   min="0">
+        </div>
+    `).join('');
+    
+    document.getElementById('budgetModal').classList.add('active');
+}
+
+function closeBudgetModal() {
+    document.getElementById('budgetModal').classList.remove('active');
+}
+
+function saveBudgets() {
+    state.rooms.forEach(room => {
+        const input = document.getElementById(`budget-${room.id}`);
+        if (input) {
+            room.budget = parseFloat(input.value) || 0;
+        }
+    });
+    
+    saveToStorage();
+    updateBudgetView();
+    closeBudgetModal();
+    showNotification('Room budgets updated successfully', 'success');
+}
+
+function editRoomBudget(roomId) {
+    const room = state.rooms.find(r => r.id === roomId);
+    if (!room) return;
+    
+    const newBudget = prompt(`Set budget for ${room.name}:`, room.budget || 0);
+    if (newBudget !== null) {
+        room.budget = parseFloat(newBudget) || 0;
+        saveToStorage();
+        updateBudgetView();
+        showNotification(`Budget updated for ${room.name}`, 'success');
+    }
+}
+
+function viewRoomItems(roomId) {
+    state.filters.room = roomId;
+    document.getElementById('roomFilter').value = roomId;
+    showView('inventory');
+}
+
+function assignItemsToRoom() {
+    const unassignedItems = state.items.filter(i => !i.roomId);
+    if (unassignedItems.length === 0) return;
+    
+    const roomOptions = state.rooms.map(r => `${r.name} (${r.id})`).join('\n');
+    const roomId = prompt(`Assign ${unassignedItems.length} unassigned items to room:\n${roomOptions}`);
+    const room = state.rooms.find(r => r.id === roomId);
+    
+    if (room) {
+        unassignedItems.forEach(item => {
+            item.roomId = roomId;
+        });
+        saveToStorage();
+        updateBudgetView();
+        showNotification(`${unassignedItems.length} items assigned to ${room.name}`, 'success');
+    }
+}
+
+function exportBudgetReport() {
+    const timeframe = document.getElementById('budgetTimeframe')?.value || 'month';
+    const headers = ['Room', 'Budget', 'Actual', 'Remaining', 'Percentage', 'Status'];
+    
+    const rows = state.rooms.map(room => {
+        const roomItems = state.items.filter(i => i.roomId === room.id);
+        const spent = roomItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        const budget = room.budget || 0;
+        const remaining = budget - spent;
+        const percentage = budget > 0 ? Math.round((spent / budget) * 100) : 0;
+        
+        return [
+            `${room.icon} ${room.name}`,
+            budget,
+            spent,
+            remaining,
+            `${percentage}%`,
+            budget > 0 ? (percentage > 100 ? 'Over Budget' : percentage > 80 ? 'Warning' : 'On Track') : 'No Budget'
+        ];
+    });
+    
+    const csv = [headers, ...rows].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+    
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = `budget-report-${timeframe}-${formatDateForFilename(new Date())}.csv`;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    URL.revokeObjectURL(url);
+    
+    showNotification('Budget report exported successfully', 'success');
 }
 
 // Notification System
