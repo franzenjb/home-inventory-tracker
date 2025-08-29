@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Home Inventory Tracker - Professional Edition</title>
+    <link rel="stylesheet" href="styles-professional.css">
+</head>
+<body>
+    <div id="app">
+        <nav class="sidebar">
+            <div class="brand">
+                <div class="brand-icon">🏠</div>
+                <div class="brand-text">
+                    <h1>Inventory Pro</h1>
+                    <span>Enterprise Edition</span>
+                </div>
+            </div>
+            <div class="nav">
+                <a href="#dashboard" class="nav-item active" data-view="dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span>Dashboard</span>
+                </a>
+                <a href="#inventory" class="nav-item" data-view="inventory">
+                    <span class="nav-icon">📦</span>
+                    <span>Inventory</span>
+                    <span class="nav-badge" id="inventoryCount">0</span>
+                </a>
+                <a href="#budget" class="nav-item" data-view="budget">
+                    <span class="nav-icon">💰</span>
+                    <span>Budget</span>
+                </a>
+                <a href="#deliveries" class="nav-item" data-view="deliveries">
+                    <span class="nav-icon">🚚</span>
+                    <span>Deliveries</span>
+                    <span class="nav-badge" id="deliveryCount">0</span>
+                </a>
+                <a href="#rooms" class="nav-item" data-view="rooms">
+                    <span class="nav-icon">🏠</span>
+                    <span>Rooms</span>
+                    <span class="nav-badge" id="roomCount">0</span>
+                </a>
+                <a href="#analytics" class="nav-item" data-view="analytics">
+                    <span class="nav-icon">📈</span>
+                    <span>Analytics</span>
+                </a>
+                <a href="#documents" class="nav-item" data-view="documents">
+                    <span class="nav-icon">📄</span>
+                    <span>Documents</span>
+                </a>
+            </div>
+            <div class="sidebar-footer">
+                <button class="btn-export" onclick="exportData()">📥 Export Data</button>
+            </div>
+        </nav>
+
+        <div class="main-container">
+            <header class="header">
+                <div class="search-bar">
+                    <input type="text" class="search-input" placeholder="Search items, rooms, or documents..." id="searchInput">
+                </div>
+                <div class="header-actions">
+                    <button class="btn-primary" onclick="showItemModal()">+ Add Item</button>
+                    <button class="btn-secondary" onclick="showRoomModal()">+ Add Room</button>
+                    <button class="btn-secondary" id="toggleViewBtn" style="display:none;" onclick="toggleView()">
+                        <span id="viewIcon">⊞</span> <span id="viewText">Badge View</span>
+                    </button>
+                </div>
+            </header>
+
+            <div class="content-area" id="contentArea">
+                <!-- Dynamic content loads here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Item Modal -->
+    <div class="modal-overlay" id="itemModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="itemModalTitle">Add New Item</h3>
+                <button class="modal-close" onclick="closeItemModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="itemForm">
+                    <div class="form-group">
+                        <label for="itemName">Item Name *</label>
+                        <input type="text" id="itemName" required>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemCategory">Category *</label>
+                            <select id="itemCategory" required>
+                                <option value="">Select Category</option>
+                                <option value="furniture">Furniture</option>
+                                <option value="appliance">Appliance</option>
+                                <option value="electronics">Electronics</option>
+                                <option value="decor">Decor</option>
+                                <option value="lighting">Lighting</option>
+                                <option value="storage">Storage</option>
+                                <option value="textiles">Textiles</option>
+                                <option value="other">Other</option>
+                            </select>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemRoom">Room *</label>
+                            <select id="itemRoom" required></select>
+                        </div>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemQuantity">Quantity</label>
+                            <input type="number" id="itemQuantity" min="1" value="1">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemPrice">Price ($)</label>
+                            <input type="number" id="itemPrice" min="0" step="0.01">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemStatus">Status</label>
+                        <select id="itemStatus">
+                            <option value="wishlist">Wishlist</option>
+                            <option value="ordered">Ordered</option>
+                            <option value="delivered">Delivered</option>
+                            <option value="active">Active/In Use</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label for="itemOrderDate">Order Date</label>
+                            <input type="date" id="itemOrderDate">
+                        </div>
+                        
+                        <div class="form-group">
+                            <label for="itemDeliveryDate">Delivery Date</label>
+                            <input type="date" id="itemDeliveryDate">
+                        </div>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemUrl">Product URL</label>
+                        <input type="url" id="itemUrl" placeholder="https://...">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="itemNotes">Notes</label>
+                        <textarea id="itemNotes" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeItemModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveItem()">Save Item</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Room Modal -->
+    <div class="modal-overlay" id="roomModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3 id="roomModalTitle">Add New Room</h3>
+                <button class="modal-close" onclick="closeRoomModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="roomForm">
+                    <div class="form-group">
+                        <label for="roomName">Room Name *</label>
+                        <input type="text" id="roomName" required>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomIcon">Room Icon</label>
+                        <select id="roomIcon">
+                            <option value="🏠">🏠 General</option>
+                            <option value="🛋️">🛋️ Living Room</option>
+                            <option value="🛏️">🛏️ Bedroom</option>
+                            <option value="🍳">🍳 Kitchen</option>
+                            <option value="🚿">🚿 Bathroom</option>
+                            <option value="📚">📚 Office</option>
+                            <option value="🎮">🎮 Game Room</option>
+                            <option value="🌿">🌿 Garden</option>
+                            <option value="🚗">🚗 Garage</option>
+                            <option value="🏠">🏠 Attic</option>
+                            <option value="🏠">🏠 Basement</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomBudget">Budget ($)</label>
+                        <input type="number" id="roomBudget" min="0" step="100">
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="roomDescription">Description</label>
+                        <textarea id="roomDescription" rows="3"></textarea>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeRoomModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveRoom()">Save Room</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Budget Modal -->
+    <div class="modal-overlay" id="budgetModal">
+        <div class="modal">
+            <div class="modal-header">
+                <h3>Set Room Budget</h3>
+                <button class="modal-close" onclick="closeBudgetModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="budgetForm">
+                    <div class="form-group">
+                        <label for="budgetRoomSelect">Room</label>
+                        <select id="budgetRoomSelect" required></select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="budgetAmount">Budget Amount ($)</label>
+                        <input type="number" id="budgetAmount" min="0" step="100" required>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button class="btn-secondary" onclick="closeBudgetModal()">Cancel</button>
+                <button class="btn-primary" onclick="saveBudget()">Save Budget</button>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
