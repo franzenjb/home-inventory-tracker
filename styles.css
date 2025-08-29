@@ -1,16 +1,16 @@
 /* Home Inventory Tracker - Enterprise Grade Styles */
 
 :root {
-    /* Primary Brand Colors */
-    --primary-color: #6366f1;
-    --primary-dark: #4f46e5;
-    --primary-light: #a5b4fc;
-    --primary-gradient: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #a855f7 100%);
+    /* Professional Corporate Colors */
+    --primary-color: #1e40af;
+    --primary-dark: #1e3a8a;
+    --primary-light: #3b82f6;
+    --primary-gradient: linear-gradient(135deg, #1e40af 0%, #2563eb 100%);
     
     /* Secondary Colors */
-    --secondary-color: #06b6d4;
-    --secondary-dark: #0891b2;
-    --secondary-light: #67e8f9;
+    --secondary-color: #475569;
+    --secondary-dark: #334155;
+    --secondary-light: #64748b;
     
     /* Status Colors */
     --success-color: #10b981;
@@ -36,10 +36,10 @@
     --gray-50: #f8fafc;
     --white: #ffffff;
     
-    /* Glassmorphism */
-    --glass-bg: rgba(255, 255, 255, 0.8);
-    --glass-border: rgba(255, 255, 255, 0.2);
-    --glass-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37);
+    /* Professional Glass Effects */
+    --glass-bg: rgba(255, 255, 255, 0.95);
+    --glass-border: rgba(255, 255, 255, 0.5);
+    --glass-shadow: 0 4px 16px 0 rgba(0, 0, 0, 0.1);
     
     /* Advanced Shadows */
     --shadow-xs: 0 1px 2px 0 rgb(0 0 0 / 0.05);
@@ -119,7 +119,7 @@
 
 body {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Inter', Roboto, 'Helvetica Neue', Arial, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    background: var(--gray-50);
     color: var(--gray-900);
     line-height: var(--leading-normal);
     font-feature-settings: 'kern' 1, 'liga' 1, 'frac' 1, 'calt' 1;
@@ -155,63 +155,36 @@ body {
 
 /* Header */
 .app-header {
-    background: var(--glass-bg);
-    backdrop-filter: blur(20px) saturate(180%);
-    border: 1px solid var(--glass-border);
-    box-shadow: var(--shadow-xl);
+    background: var(--white);
+    border-bottom: 1px solid var(--gray-200);
+    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
     position: sticky;
     top: 0;
     z-index: var(--z-50);
-    margin: var(--space-4) var(--space-4) 0;
-    border-radius: var(--radius-2xl);
-    overflow: hidden;
-    transition: all var(--transition-normal);
 }
 
-.app-header:hover {
-    transform: translateY(-2px);
-    box-shadow: var(--shadow-2xl);
-}
 
 .header-content {
-    padding: var(--space-8) var(--space-8) var(--space-6);
-    text-align: center;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-    position: relative;
-    background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.05) 100%);
+    padding: 1rem 1.5rem;
+    max-width: 1400px;
+    margin: 0 auto;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
 }
 
-.header-content::after {
-    content: '';
-    position: absolute;
-    bottom: 0;
-    left: 50%;
-    transform: translateX(-50%);
-    width: 60px;
-    height: 3px;
-    background: var(--primary-gradient);
-    border-radius: var(--radius-full);
-}
 
 .header-content h1 {
-    font-size: var(--font-size-4xl);
-    font-weight: 800;
-    background: var(--primary-gradient);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-    margin-bottom: var(--space-2);
-    letter-spacing: -0.02em;
-    line-height: var(--leading-tight);
-    text-shadow: 0 0 30px rgba(99, 102, 241, 0.3);
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--gray-900);
+    margin: 0;
 }
 
 .tagline {
-    color: var(--gray-600);
-    font-size: var(--font-size-lg);
-    font-weight: 500;
-    letter-spacing: 0.02em;
-    opacity: 0.9;
+    color: var(--gray-500);
+    font-size: 0.875rem;
+    margin-left: 1rem;
 }
 
 /* Navigation */
@@ -235,54 +208,26 @@ body {
 }
 
 .nav-btn {
-    padding: var(--space-3) var(--space-6);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.1);
+    padding: 0.5rem 1rem;
+    background: transparent;
+    border: none;
     color: var(--gray-700);
-    font-size: var(--font-size-sm);
-    font-weight: 600;
+    font-size: 0.875rem;
+    font-weight: 500;
     cursor: pointer;
-    border-radius: var(--radius-xl);
-    transition: all var(--transition-normal);
-    backdrop-filter: blur(10px);
-    position: relative;
-    overflow: hidden;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-
-.nav-btn::before {
-    content: '';
-    position: absolute;
-    top: 0;
-    left: -100%;
-    width: 100%;
-    height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent);
-    transition: left var(--transition-slow);
-}
-
-.nav-btn:hover::before {
-    left: 100%;
+    border-radius: 0.375rem;
+    transition: all 0.15s;
+    text-transform: none;
 }
 
 .nav-btn:hover {
-    background: rgba(255, 255, 255, 0.2);
-    border-color: rgba(255, 255, 255, 0.3);
-    transform: translateY(-2px) scale(1.02);
-    box-shadow: var(--shadow-lg);
+    background: var(--gray-100);
+    color: var(--gray-900);
 }
 
 .nav-btn.active {
-    background: var(--primary-gradient);
+    background: var(--primary-color);
     color: var(--white);
-    border-color: transparent;
-    transform: translateY(-1px);
-    box-shadow: var(--shadow-xl), 0 0 20px rgba(99, 102, 241, 0.4);
-}
-
-.nav-btn.active::before {
-    display: none;
 }
 
 /* Stats Bar - Premium KPI Dashboard */
