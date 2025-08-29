@@ -689,11 +689,11 @@ function updateBudgetView() {
     const totalRemaining = totalBudget - totalSpent;
     const utilizationPercentage = totalBudget > 0 ? (totalSpent / totalBudget) * 100 : 0;
     
-    // Update KPI cards with animations
-    updateKPICards(totalBudget, totalSpent, totalRemaining, utilizationPercentage);
+    // Update KPI cards if they exist (removed undefined function calls)
+    // updateKPICards(totalBudget, totalSpent, totalRemaining, utilizationPercentage);
     
-    // Update progress ring
-    updateProgressRing(utilizationPercentage);
+    // Update progress ring if it exists
+    // updateProgressRing(utilizationPercentage);
 
     // Main Budget Table
     const budgetTableBody = document.getElementById('budgetTableBody');
@@ -795,11 +795,15 @@ function updateBudgetView() {
         document.getElementById('totalStatus').innerHTML = `<span class="budget-status ${totalStatusClass}">${totalStatusText}</span>`;
     }
     
-    // Update charts
-    updateBudgetCharts(relevantItems);
+    // Update charts if function exists
+    if (typeof updateBudgetCharts === 'function') {
+        updateBudgetCharts(relevantItems);
+    }
     
-    // Update recent activity
-    updateRecentActivity(relevantItems);
+    // Update recent activity if function exists
+    if (typeof updateRecentActivity === 'function') {
+        updateRecentActivity(relevantItems);
+    }
     
     // Add unassigned items row if any exist
     const unassignedItems = relevantItems.filter(i => !i.roomId);
