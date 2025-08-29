@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Restore Rooms - Home Inventory</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+            max-width: 800px;
+            margin: 40px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        h1 { color: #333; }
+        .current-rooms {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .room-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+        .room-item {
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 4px;
+            border: 1px solid #dee2e6;
+        }
+        .add-rooms {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        .quick-add {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .room-btn {
+            padding: 10px;
+            background: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .room-btn:hover {
+            background: #0056b3;
+        }
+        .room-btn.added {
+            background: #28a745;
+        }
+        .stats {
+            background: #e9ecef;
+            padding: 10px;
+            border-radius: 4px;
+            margin-bottom: 20px;
+        }
+        .action-buttons {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+        }
+        .btn-export {
+            padding: 10px 20px;
+            background: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+        .btn-clear {
+            padding: 10px 20px;
+            background: #dc3545;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+    <h1>🏠 Restore Your Rooms</h1>
+    
+    <div class="stats" id="stats">
+        Loading room data...
+    </div>
+    
+    <div class="current-rooms">
+        <h2>Current Rooms</h2>
+        <div class="room-list" id="currentRooms"></div>
+    </div>
+    
+    <div class="add-rooms">
+        <h2>Quick Add Common Rooms</h2>
+        <p>Click to add missing rooms (with suggested budgets):</p>
+        <div class="quick-add" id="quickAdd"></div>
+        
+        <h3 style="margin-top: 30px;">Custom Room</h3>
+        <div style="display: flex; gap: 10px;">
+            <input type="text" id="customName" placeholder="Room name" style="flex: 1; padding: 8px;">
+            <input type="number" id="customBudget" placeholder="Budget" style="width: 120px; padding: 8px;">
+            <button onclick="addCustomRoom()" class="room-btn">Add Custom</button>
+        </div>
+    </div>
+    
+    <div class="action-buttons">
+        <button class="btn-export" onclick="exportData()">📥 Export All Data</button>
+        <button class="btn-clear" onclick="clearAll()">🗑️ Clear All Rooms</button>
+    </div>
+
+    <script>
+        const commonRooms = [
+            { name: 'Living Room', icon: '🛋️', budget: 5000 },
+            { name: 'Master Bedroom', icon: '🛏️', budget: 4000 },
+            { name: 'Guest Bedroom', icon: '🛏️', budget: 2000 },
+            { name: 'Kids Bedroom', icon: '🧸', budget: 2500 },
+            { name: 'Kitchen', icon: '🍳', budget: 10000 },
+            { name: 'Dining Room', icon: '🍽️', budget: 3000 },
+            { name: 'Master Bathroom', icon: '🚿', budget: 3000 },
+            { name: 'Guest Bathroom', icon: '🚿', budget: 1500 },
+            { name: 'Powder Room', icon: '🚽', budget: 1000 },
+            { name: 'Office', icon: '📚', budget: 3000 },
+            { name: 'Home Gym', icon: '🏋️', budget: 2000 },
+            { name: 'Game Room', icon: '🎮', budget: 3000 },
+            { name: 'Laundry Room', icon: '🧺', budget: 1500 },
+            { name: 'Garage', icon: '🚗', budget: 2000 },
+            { name: 'Basement', icon: '📦', budget: 3000 },
+            { name: 'Attic', icon: '📦', budget: 1000 },
+            { name: 'Entryway', icon: '🚪', budget: 1000 },
+            { name: 'Hallway', icon: '🚶', budget: 500 },
+            { name: 'Patio/Deck', icon: '🌿', budget: 3000 },
+            { name: 'Backyard', icon: '🌳', budget: 5000 }
+        ];
+        
+        function loadRooms() {
+            const rooms = JSON.parse(localStorage.getItem('inventoryRooms') || '[]');
+            const items = JSON.parse(localStorage.getItem('inventoryItems') || '[]');
+            
+            // Update stats
+            const totalBudget = rooms.reduce((sum, r) => sum + (r.budget || 0), 0);
+            document.getElementById('stats').innerHTML = `
+                <strong>Current Status:</strong> ${rooms.length} rooms | 
+                Total Budget: $${totalBudget.toLocaleString()} | 
+                ${items.length} items
+            `;
+            
+            // Show current rooms
+            const currentHtml = rooms.map(room => `
+                <div class="room-item">
+                    ${room.icon || '🏠'} ${room.name}
+                    <br><small>Budget: $${(room.budget || 0).toLocaleString()}</small>
+                </div>
+            `).join('');
+            document.getElementById('currentRooms').innerHTML = currentHtml || '<p>No rooms found</p>';
+            
+            // Show quick add buttons
+            const existingNames = rooms.map(r => r.name.toLowerCase());
+            const quickHtml = commonRooms.map(room => {
+                const exists = existingNames.includes(room.name.toLowerCase());
+                return `
+                    <button class="room-btn ${exists ? 'added' : ''}" 
+                            onclick="addRoom('${room.name}', '${room.icon}', ${room.budget})"
+                            ${exists ? 'disabled' : ''}>
+                        ${room.icon} ${room.name}
+                        <br><small>$${room.budget.toLocaleString()}</small>
+                    </button>
+                `;
+            }).join('');
+            document.getElementById('quickAdd').innerHTML = quickHtml;
+        }
+        
+        function generateId() {
+            return Date.now().toString(36) + Math.random().toString(36).substr(2);
+        }
+        
+        function addRoom(name, icon, budget) {
+            const rooms = JSON.parse(localStorage.getItem('inventoryRooms') || '[]');
+            rooms.push({
+                id: generateId(),
+                name: name,
+                icon: icon,
+                budget: budget,
+                description: ''
+            });
+            localStorage.setItem('inventoryRooms', JSON.stringify(rooms));
+            loadRooms();
+        }
+        
+        function addCustomRoom() {
+            const name = document.getElementById('customName').value.trim();
+            const budget = parseInt(document.getElementById('customBudget').value) || 0;
+            if (name) {
+                addRoom(name, '🏠', budget);
+                document.getElementById('customName').value = '';
+                document.getElementById('customBudget').value = '';
+            }
+        }
+        
+        function exportData() {
+            const data = {
+                rooms: JSON.parse(localStorage.getItem('inventoryRooms') || '[]'),
+                items: JSON.parse(localStorage.getItem('inventoryItems') || '[]'),
+                exportDate: new Date().toISOString()
+            };
+            const blob = new Blob([JSON.stringify(data, null, 2)], {type: 'application/json'});
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `home-inventory-backup-${new Date().toISOString().split('T')[0]}.json`;
+            a.click();
+        }
+        
+        function clearAll() {
+            if (confirm('Are you sure you want to clear all rooms? This cannot be undone!')) {
+                localStorage.setItem('inventoryRooms', '[]');
+                loadRooms();
+            }
+        }
+        
+        // Load on start
+        loadRooms();
+    </script>
+</body>
+</html>
