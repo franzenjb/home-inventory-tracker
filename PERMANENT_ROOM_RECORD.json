@@ -1,0 +1,95 @@
+{
+  "created": "2025-08-29",
+  "owner": "Jeff Franzen",
+  "rooms": [
+    {
+      "name": "Living Room",
+      "budget": 25000,
+      "icon": "🛋️"
+    },
+    {
+      "name": "Dining Room", 
+      "budget": 0,
+      "icon": "🍽️",
+      "note": "Budget not specified"
+    },
+    {
+      "name": "Den",
+      "budget": 10000,
+      "icon": "📺"
+    },
+    {
+      "name": "Downstairs Office",
+      "budget": 4000,
+      "icon": "💼"
+    },
+    {
+      "name": "Upstairs Office",
+      "budget": 4000,
+      "icon": "📚"
+    },
+    {
+      "name": "Breakfast Room",
+      "budget": 10000,
+      "icon": "☕"
+    },
+    {
+      "name": "Kitchen",
+      "budget": 0,
+      "icon": "🍳",
+      "note": "Budget not specified"
+    },
+    {
+      "name": "Master Bedroom",
+      "budget": 10000,
+      "icon": "🛏️"
+    },
+    {
+      "name": "Bedroom 1",
+      "budget": 3000,
+      "icon": "🛏️"
+    },
+    {
+      "name": "Bedroom 2",
+      "budget": 3000,
+      "icon": "🛏️"
+    },
+    {
+      "name": "Bedroom 3",
+      "budget": 3000,
+      "icon": "🛏️"
+    },
+    {
+      "name": "Bedroom 4",
+      "budget": 3000,
+      "icon": "🛏️"
+    },
+    {
+      "name": "Out Front Furniture",
+      "budget": 0,
+      "icon": "🪴",
+      "note": "Budget not specified"
+    },
+    {
+      "name": "Out Back Furniture",
+      "budget": 0,
+      "icon": "🌳",
+      "note": "Budget not specified"
+    },
+    {
+      "name": "Jeff's Office",
+      "budget": 0,
+      "icon": "👨‍💼",
+      "note": "Budget not specified - may be same as Upstairs Office"
+    }
+  ],
+  "total_specified_budget": 75000,
+  "notes": [
+    "Living Room listed twice in original list - kept as one entry",
+    "Dining Room - no budget specified",
+    "Kitchen - no budget specified", 
+    "Out Front Furniture - no budget specified",
+    "Out Back Furniture - no budget specified",
+    "Jeff's Office - no budget specified (may be duplicate of Upstairs Office)"
+  ]
+}
